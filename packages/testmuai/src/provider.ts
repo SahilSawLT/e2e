@@ -1,6 +1,7 @@
 /** TestMu AI's hosted Chrome and Edge as a `BrowserProvider` for the web engine. */
 
 import type { BrowserLease, BrowserProvider, BrowserProviderScope, BrowserRequest } from '@e2e-dev/web';
+import { ConfigurationError, rejectUnknownKeys } from 'e2e/engine';
 import { envValue } from './env.ts';
 
 const LT_USERNAME = 'LT_USERNAME';
@@ -14,6 +15,9 @@ const LT_ACCESS_KEY = 'LT_ACCESS_KEY';
  */
 export type TestMuAIRoute = '/puppeteer' | '/playwright-cdp';
 
+/** The browsers the web engine can attach to over CDP: Chromium ones. */
+export type TestMuAIBrowser = 'Chrome' | 'MicrosoftEdge';
+
 export interface TestMuAIOptions {
   /**
    * `worker` (default): one TestMu AI session per worker slot for the run.
@@ -23,10 +27,10 @@ export interface TestMuAIOptions {
   readonly scope?: BrowserProviderScope | undefined;
   /** CDP route on the hub; `/puppeteer` when absent. */
   readonly route?: TestMuAIRoute | undefined;
-  /** The hub host; `cdp.lambdatest.com` when absent. */
+  /** The hub host, without a scheme or path; `cdp.lambdatest.com` when absent. */
   readonly hub?: string | undefined;
-  /** `Chrome` (default) or `MicrosoftEdge`: CDP needs a Chromium browser. */
-  readonly browserName?: string | undefined;
+  /** `Chrome` when absent. */
+  readonly browserName?: TestMuAIBrowser | undefined;
   /** `latest` when absent. */
   readonly browserVersion?: string | undefined;
   /** TestMu AI platform name, such as `Windows 11` (default) or `macOS Sequoia`. */
@@ -35,14 +39,33 @@ export interface TestMuAIOptions {
   readonly build?: string | undefined;
   /**
    * Further `LT:Options` capabilities (`video`, `network`, `console`,
-   * `idleTimeout`, `tunnel`, ...). `user` and `accessKey` always come from
-   * the run's environment.
+   * `idleTimeout`, `tunnel`, ...). `idleTimeout` is 600 seconds when absent.
+   * `user`, `accessKey`, `build`, `name`, and `platform` are not accepted
+   * here: the provider sets them.
    */
   readonly capabilities?: Readonly<Record<string, unknown>> | undefined;
 }
 
+const OPTION_KEYS: readonly string[] = Object.keys({
+  scope: true,
+  route: true,
+  hub: true,
+  browserName: true,
+  browserVersion: true,
+  platform: true,
+  build: true,
+  capabilities: true,
+} satisfies Record<keyof TestMuAIOptions, true>);
+
+const ROUTES: readonly string[] = ['/puppeteer', '/playwright-cdp'] satisfies TestMuAIRoute[];
+const BROWSERS: readonly string[] = ['Chrome', 'MicrosoftEdge'] satisfies TestMuAIBrowser[];
+const PROVIDER_CAPABILITIES = ['user', 'accessKey', 'build', 'name', 'platform'];
+const HOST = /^[A-Za-z0-9.-]+(:\d+)?$/;
+
 const DEFAULT_HUB = 'cdp.lambdatest.com';
 const DEFAULT_ROUTE: TestMuAIRoute = '/puppeteer';
+// The hub ends a CDP session after 300 s without client traffic, shorter than a slow test's gaps.
+const DEFAULT_IDLE_TIMEOUT_SECONDS = 600;
 
 /**
  * TestMu AI browsers for `web({ browser: testmuai() })`. A TestMu AI
@@ -53,7 +76,24 @@ const DEFAULT_ROUTE: TestMuAIRoute = '/puppeteer';
  * from the run's environment and never appear in a log line.
  */
 export function testmuai(options: TestMuAIOptions = {}): BrowserProvider {
-  const { scope, route = DEFAULT_ROUTE, hub = DEFAULT_HUB } = options;
+  rejectUnknownKeys('testmuai()', options, OPTION_KEYS);
+  const { scope, route = DEFAULT_ROUTE, hub = DEFAULT_HUB, browserName = 'Chrome' } = options;
+  if (!ROUTES.includes(route)) {
+    throw new ConfigurationError('INVALID_CONFIG', `testmuai: \`route\` must be one of ${ROUTES.join(', ')}, got "${route}"`);
+  }
+  if (!HOST.test(hub)) {
+    throw new ConfigurationError('INVALID_CONFIG', `testmuai: \`hub\` must be a host such as "${DEFAULT_HUB}", without a scheme or path, got "${hub}"`);
+  }
+  if (!BROWSERS.includes(browserName)) {
+    throw new ConfigurationError('INVALID_CONFIG', `testmuai: \`browserName\` must be one of ${BROWSERS.join(', ')}, got "${browserName}"`);
+  }
+  const reserved = PROVIDER_CAPABILITIES.filter((key) => options.capabilities !== undefined && key in options.capabilities);
+  if (reserved.length > 0) {
+    throw new ConfigurationError(
+      'INVALID_CONFIG',
+      `testmuai: \`capabilities\` cannot set ${reserved.map((key) => `\`${key}\``).join(', ')}; use the \`build\` and \`platform\` options, and LT_USERNAME/LT_ACCESS_KEY for credentials`,
+    );
+  }
   return {
     name: 'testmuai',
     ...(scope === undefined ? {} : { scope }),
@@ -67,11 +107,12 @@ export function testmuai(options: TestMuAIOptions = {}): BrowserProvider {
       const build = options.build ?? `e2e ${request.runId}`;
       const name = `e2e ${request.targetName} ${label}`;
       const capabilities = {
-        browserName: options.browserName ?? 'Chrome',
+        browserName,
         browserVersion: options.browserVersion ?? 'latest',
         'LT:Options': {
-          platform: options.platform ?? 'Windows 11',
+          idleTimeout: DEFAULT_IDLE_TIMEOUT_SECONDS,
           ...options.capabilities,
+          platform: options.platform ?? 'Windows 11',
           build,
           name,
           user,
@@ -80,7 +121,8 @@ export function testmuai(options: TestMuAIOptions = {}): BrowserProvider {
       };
       request.log(`TestMu AI session "${name}" in build "${build}"`);
       return {
-        id: `${request.runId}:${request.targetName}:${label}`,
+        // Worker-scope leases share one bounded environment variable, so the id stays short.
+        id: `${request.targetName}:${label}`,
         cdpEndpoint: `wss://${hub}${route}?capabilities=${encodeURIComponent(JSON.stringify(capabilities))}`,
       };
     },

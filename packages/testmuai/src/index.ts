@@ -6,4 +6,4 @@
  */
 
 export { testmuai } from './provider.ts';
-export type { TestMuAIOptions, TestMuAIRoute } from './provider.ts';
+export type { TestMuAIBrowser, TestMuAIOptions, TestMuAIRoute } from './provider.ts';
