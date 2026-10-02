@@ -203,6 +203,7 @@
             "pages": [
               "integrations/index",
               "integrations/kernel",
+              "integrations/testmuai",
               "integrations/eas"
             ]
           },
