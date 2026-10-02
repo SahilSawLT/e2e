@@ -1,5 +1,5 @@
 /**
- * `lambdatest()` builds the CDP URL a LambdaTest session starts on: the
+ * `testmuai()` builds the CDP URL a TestMu AI session starts on: the
  * capabilities it encodes, credentials read from the run's environment
  * only, session and build names, the route and hub options, scope, log lines
  * that never carry the access key, and a release that calls nothing.
@@ -7,7 +7,7 @@
 
 import type { BrowserReleaseContext, BrowserRequest } from '@e2e-dev/web';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { lambdatest } from '../../src/index.ts';
+import { testmuai } from '../../src/index.ts';
 
 const ACCESS_KEY = 'LT_secret-access-key';
 
@@ -33,7 +33,7 @@ function decode(cdpEndpoint: string): { url: URL; capabilities: Record<string, a
 
 beforeEach(() => {
   vi.stubGlobal('fetch', () => {
-    throw new Error('lambdatest() must not call the network');
+    throw new Error('testmuai() must not call the network');
   });
 });
 
@@ -41,9 +41,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('lambdatest()', () => {
+describe('testmuai()', () => {
   it('builds a /puppeteer CDP URL on cdp.lambdatest.com with the run and target in the names', async () => {
-    const lease = await lambdatest().acquire(request());
+    const lease = await testmuai().acquire(request());
     const { url, capabilities } = decode(lease.cdpEndpoint);
 
     expect(url.protocol).toBe('wss:');
@@ -64,7 +64,7 @@ describe('lambdatest()', () => {
   });
 
   it('names a per-attempt session after the attempt', async () => {
-    const provider = lambdatest({ scope: 'attempt' });
+    const provider = testmuai({ scope: 'attempt' });
     const lease = await provider.acquire(request({ attemptId: 'attempt-7' }));
 
     expect(provider.scope).toBe('attempt');
@@ -73,11 +73,11 @@ describe('lambdatest()', () => {
   });
 
   it('leaves scope to the engine default when none is given', () => {
-    expect('scope' in lambdatest()).toBe(false);
+    expect('scope' in testmuai()).toBe(false);
   });
 
   it('honours the route, hub, browser, platform, build, and extra capabilities', async () => {
-    const lease = await lambdatest({
+    const lease = await testmuai({
       route: '/playwright-cdp',
       hub: 'cdp.eu.example.test',
       browserName: 'MicrosoftEdge',
@@ -98,7 +98,7 @@ describe('lambdatest()', () => {
   it('takes the credentials from the run environment, never from capabilities or process.env', async () => {
     vi.stubEnv('LT_USERNAME', 'from-process-env');
     vi.stubEnv('LT_ACCESS_KEY', 'from-process-env');
-    const lease = await lambdatest({ capabilities: { user: 'mallory', accessKey: 'spoofed' } }).acquire(request());
+    const lease = await testmuai({ capabilities: { user: 'mallory', accessKey: 'spoofed' } }).acquire(request());
     const options = decode(lease.cdpEndpoint).capabilities['LT:Options'];
 
     expect(options.user).toBe('alice');
@@ -107,25 +107,25 @@ describe('lambdatest()', () => {
   });
 
   it('fails the lease when a credential is missing or blank', async () => {
-    await expect(lambdatest().acquire(request({ env: { LT_USERNAME: 'alice' } }))).rejects.toThrow(
+    await expect(testmuai().acquire(request({ env: { LT_USERNAME: 'alice' } }))).rejects.toThrow(
       'LT_USERNAME and LT_ACCESS_KEY must be set',
     );
-    await expect(lambdatest().acquire(request({ env: { LT_USERNAME: ' ', LT_ACCESS_KEY: ACCESS_KEY } }))).rejects.toThrow(
+    await expect(testmuai().acquire(request({ env: { LT_USERNAME: ' ', LT_ACCESS_KEY: ACCESS_KEY } }))).rejects.toThrow(
       'LT_USERNAME and LT_ACCESS_KEY must be set',
     );
   });
 
   it('logs the session and build names but never the access key or the URL', async () => {
     const req = request();
-    await lambdatest().acquire(req);
+    await testmuai().acquire(req);
 
-    expect(req.lines).toEqual(['LambdaTest session "e2e chromium slot 1 of 2" in build "e2e run-1"']);
+    expect(req.lines).toEqual(['TestMu AI session "e2e chromium slot 1 of 2" in build "e2e run-1"']);
     expect(req.lines.join('\n')).not.toContain(ACCESS_KEY);
     expect(req.lines.join('\n')).not.toContain('wss://');
   });
 
   it('releases without calling anything', async () => {
-    const provider = lambdatest();
+    const provider = testmuai();
     const lease = await provider.acquire(request());
     const context: BrowserReleaseContext = {
       runId: 'run-1',

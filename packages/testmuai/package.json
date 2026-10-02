@@ -1,13 +1,13 @@
 {
-  "name": "@e2e-dev/lambdatest",
+  "name": "@e2e-dev/testmuai",
   "version": "0.0.0",
-  "description": "LambdaTest hosted browsers for e2e: run web targets in LambdaTest's cloud Chrome and Edge",
+  "description": "TestMu AI hosted browsers for e2e: run web targets in TestMu AI's cloud Chrome and Edge",
   "keywords": [
     "e2e",
     "end-to-end",
     "testing",
     "ai-testing",
-    "lambdatest",
+    "testmuai",
     "cloud-browsers",
     "hosted-browsers",
     "browser-automation",
@@ -20,12 +20,12 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tester-army/e2e.git",
-    "directory": "packages/lambdatest"
+    "directory": "packages/testmuai"
   },
   "bugs": {
     "url": "https://github.com/tester-army/e2e/issues"
   },
-  "homepage": "https://github.com/tester-army/e2e/tree/main/packages/lambdatest#readme",
+  "homepage": "https://github.com/tester-army/e2e/tree/main/packages/testmuai#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public",
