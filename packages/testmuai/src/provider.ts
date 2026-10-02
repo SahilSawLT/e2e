@@ -76,6 +76,9 @@ const DEFAULT_IDLE_TIMEOUT_SECONDS = 600;
  * from the run's environment and never appear in a log line.
  */
 export function testmuai(options: TestMuAIOptions = {}): BrowserProvider {
+  if (!isRecord(options)) {
+    throw new ConfigurationError('INVALID_CONFIG', 'testmuai() options must be an object');
+  }
   rejectUnknownKeys('testmuai()', options, OPTION_KEYS);
   const { scope, route = DEFAULT_ROUTE, hub = DEFAULT_HUB, browserName = 'Chrome' } = options;
   if (!ROUTES.includes(route)) {
@@ -86,6 +89,9 @@ export function testmuai(options: TestMuAIOptions = {}): BrowserProvider {
   }
   if (!BROWSERS.includes(browserName)) {
     throw new ConfigurationError('INVALID_CONFIG', `testmuai: \`browserName\` must be one of ${BROWSERS.join(', ')}, got "${browserName}"`);
+  }
+  if (options.capabilities !== undefined && !isRecord(options.capabilities)) {
+    throw new ConfigurationError('INVALID_CONFIG', 'testmuai: `capabilities` must be an object of `LT:Options` fields');
   }
   const reserved = PROVIDER_CAPABILITIES.filter((key) => options.capabilities !== undefined && key in options.capabilities);
   if (reserved.length > 0) {
@@ -130,4 +136,9 @@ export function testmuai(options: TestMuAIOptions = {}): BrowserProvider {
       // Closing the CDP connection, which the engine does, ends the TestMu AI session.
     },
   };
+}
+
+/** True for a plain object. Config runs as JavaScript, so the types alone are no guard. */
+function isRecord(value: unknown): value is object {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

@@ -130,8 +130,13 @@ describe('testmuai()', () => {
     [{ browserName: 'Firefox' }, '`browserName` must be one of Chrome, MicrosoftEdge'],
     [{ capabilities: { user: 'mallory', accessKey: 'spoofed' } }, '`capabilities` cannot set `user`, `accessKey`'],
     [{ capabilities: { build: 'nightly', platform: 'Windows 10' } }, '`capabilities` cannot set `build`, `platform`'],
+    [null, 'testmuai() options must be an object'],
+    [[], 'testmuai() options must be an object'],
+    [{ capabilities: null }, '`capabilities` must be an object'],
+    [{ capabilities: ['video'] }, '`capabilities` must be an object'],
+    [{ capabilities: 'video' }, '`capabilities` must be an object'],
   ])('rejects %j when the provider is created', (options, message) => {
-    expect(() => testmuai(options as TestMuAIOptions)).toThrow(
+    expect(() => testmuai(options as unknown as TestMuAIOptions)).toThrow(
       expect.objectContaining({ code: 'INVALID_CONFIG', message: expect.stringContaining(message) }),
     );
   });
