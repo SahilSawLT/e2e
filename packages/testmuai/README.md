@@ -29,6 +29,10 @@ export default {
 ```
 
 Set `LT_USERNAME` and `LT_ACCESS_KEY` in the environment `e2e run` starts in.
+To get them, [sign up for TestMu AI](https://accounts.lambdatest.com/register)
+or log in to your account, then copy your username and access key from
+**Account Settings → Password & Security → Username and Access Key**
+([accounts.lambdatest.com/security/username-accesskey](https://accounts.lambdatest.com/security/username-accesskey)).
 
 The [TestMu AI integration page](https://e2e.tester.army/docs/integrations/testmuai)
 covers the options, scopes, routes, recordings, and downloads.

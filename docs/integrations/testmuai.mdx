@@ -44,7 +44,12 @@ export default {
 ```
 
 Set `LT_USERNAME` and `LT_ACCESS_KEY` in the environment `e2e run` starts in,
-such as CI secrets. Each worker gets its own session, so `workers` sets how
+such as CI secrets. To get them, [sign up for TestMu AI](https://accounts.lambdatest.com/register)
+or log in to your account, then copy your username and access key from
+**Account Settings → Password & Security → Username and Access Key**
+([accounts.lambdatest.com/security/username-accesskey](https://accounts.lambdatest.com/security/username-accesskey)).
+
+Each worker gets its own session, so `workers` sets how
 many run at once. Keep it within your TestMu AI plan's parallel sessions:
 a session beyond it waits in TestMu AI's queue, and the web engine gives a
 session 60 seconds to accept the CDP connection, so one that waits longer
